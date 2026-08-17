@@ -1,0 +1,4 @@
+# dsh-chat-history bundle patch: registers the conversation view tab.
+- insert:
+    - id: chat-history
+      name: 'dsh-chat-history'

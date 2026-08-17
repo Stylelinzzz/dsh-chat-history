@@ -24,6 +24,7 @@
     "lib/index.js",
     "lib/client.js",
     "lib/types/**/*.d.ts",
+    "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
@@ -36,9 +37,13 @@
       "types": "./lib/types/client.d.ts",
       "default": "./lib/client.js"
     },
+    "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "inject": [
         "@deepseek-ai/dsh-client-runtime",
