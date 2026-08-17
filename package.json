@@ -1,11 +1,25 @@
 {
   "name": "dsh-chat-history",
   "description": "Chat history TOC: a user-message directory as a conversation view tab with click-to-jump",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "chat-history",
+    "toc",
+    "history",
+    "navigation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Stylelinzzz/dsh-chat-history.git"
+  },
+  "homepage": "https://github.com/Stylelinzzz/dsh-chat-history",
   "files": [
     "lib/index.js",
     "lib/client.js",
