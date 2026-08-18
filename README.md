@@ -1,50 +1,40 @@
 # dsh-chat-history
 
-DeepSeek Harness 会话头部「目录」tab：把当前会话的**用户消息历史**整理成可点击的目录，点击任意条目即可跳回聊天视图并定位到对应消息。
+A "History" tab in the DeepSeek Harness session header: turns the **user messages** of the current session into a clickable directory. Click any entry to jump back to the Chat view and scroll to that message.
 
-- 自动生成：只收录用户真正提出的问题（`user` 消息），过滤 Tool / Thinking / Command / 注入上下文等噪音，长 Agent 会话也能保持导航价值。
-- 自动翻页：tab 激活时自动连续加载更早历史（每页 50 条）直到整个会话日志进入客户端窗口，目录完整、无需手动翻聊天区。
-- 点击跳转：切回「对话」tab → 平滑滚动到目标消息 → 1.5s 高亮闪烁。
-- 零冲突：注册为 `conversation.view` 槽位的会话 tab（与官方「轨迹」tab 并列），**不占用** `details` 槽位，官方"点击工具调用看输入/输出详情"面板完全不受影响。
+- **Auto-generated**: only real user questions (`user` messages) are listed — Tool / Thinking / Command / injected-context noise is filtered out, so even long agent sessions stay navigable.
+- **Auto-paging**: while the tab is active it keeps loading older history (50 messages per page) until the whole session log is in the client window — the directory is complete without manually scrolling the chat area.
+- **Click-to-jump**: switches back to the Chat tab, smooth-scrolls to the target message, and flashes it for 1.5s.
+- **Zero conflicts**: registered as a `conversation.view` session tab (side by side with the official "Trajectory" tab) — it does **not** occupy the `details` slot, so the official tool-call detail panel keeps working untouched.
 
-## 安装
+## Install
 
 ```bash
-# 在 profile 中安装（例如 web）
+# install into a profile (e.g. web)
 dsh plugin --profile web add dsh-chat-history
 ```
 
-然后在该 profile 的 `cordis.patch.yml` 中启用：
+After restarting `dsh web`, open any session: the header tab bar shows **Chat / Trajectory / History**. Click **History** to use the directory.
 
-```yaml
-- insert:
-    - id: chat-history
-      name: 'dsh-chat-history'
-```
+## Usage
 
-重启 `dsh web` 后，打开任一会话，会话头部标签栏出现「对话 / 轨迹 / 目录」，点「目录」即可使用。
+1. Open a session and click the **History** tab in the header.
+2. The directory lists every user message in order (number + single-line truncated title; hover shows the full text).
+3. The header shows loading state: "Loading earlier history…" while older pages are being fetched, or the total entry count once complete.
+4. Click any entry — it switches back to the **Chat** tab, scrolls to the message, and flashes it.
 
-> 若插件已发布到 npm，`dsh plugin --profile web add dsh-chat-history` 会从 registry 安装；本地开发可直接指向目录：`dsh plugin --profile web add "file:./dsh-chat-history"`。
+## Development
 
-## 使用
+- Pure client plugin: a hand-written `window.__ModuleLoader__.load({ id, factory })` bundle — no build step required.
+- **No restart needed after editing `lib/client.js`**: the profile's built-in `client-hmr` stat-polls bundles every 500ms and hot-reloads on change (roughly 1s).
+- A restart **is** required when: adding a new plugin package, changing the `dsh.client` declaration in `package.json`, or toggling enable/disable in `cordis.patch.yml`.
 
-1. 打开一个会话，点击头部「目录」tab。
-2. 目录按消息顺序列出全部用户消息（编号 + 单行截断标题，hover 显示完整内容）。
-3. 顶部显示加载状态：历史未加载完时显示「正在加载更早的历史…」，加载完显示总条数。
-4. 点击任意条目 → 自动切回「对话」tab，滚动定位并高亮对应消息。
+## How it works
 
-## 开发
-
-- 纯 client 插件：`window.__ModuleLoader__.load({ id, factory })` 手写 bundle，无需构建工具。
-- 改 `lib/client.js` 内容后**无需重启**：profile 自带的 `client-hmr` 每 500ms stat 轮询 bundle，文件变化自动热更新（约 1 秒生效）。
-- 改 `package.json` 的 `dsh.client` 声明、新增插件、改 `cordis.patch.yml` 启用状态时**需要重启** `dsh web`。
-
-## 机制要点
-
-- 目录数据源：会话快照 `s.chat.order` + `s.chat.nodes.get(key)`，过滤 `kind === "user"`。
-- DOM 定位：ui-conversation 已给每个消息节点打 `data-chat-anchor-key`，直接按 key 查询即可。
-- 分页：`session.loadOlder()` 每页 50 条，`hasMore` / `loadingOlder` 驱动自动翻页，连续 3 次无新节点即停止（防 host 异常死循环）。
-- 跳转：tab 激活时只渲染 active view，故先模拟点击「对话」tab 切回聊天，再轮询目标 DOM 出现后 `scrollIntoView` + 高亮。
+- Data source: session snapshot `s.chat.order` + `s.chat.nodes.get(key)`, filtered to `kind === "user"`.
+- DOM targeting: ui-conversation already stamps every message node with `data-chat-anchor-key` — lookup by key directly.
+- Paging: `session.loadOlder()` pulls 50 messages per page, driven by `hasMore` / `loadingOlder`; stops after 3 no-progress pages to avoid looping on a stuck host.
+- Jump: since only the active view renders, first simulate a click on the Chat tab, then poll for the target DOM and `scrollIntoView` + flash.
 
 ## License
 
