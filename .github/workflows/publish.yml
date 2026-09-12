@@ -1,0 +1,42 @@
+name: publish
+
+# Publishes the package to npm using OIDC trusted publishing: no NPM_TOKEN
+# secret and no interactive 2FA. The npm side of the trust is configured once
+# at https://www.npmjs.com/package/dsh-chat-history/access (Trusted Publisher),
+# naming THIS workflow filename.
+#
+# Trigger with a version tag (`git tag v0.1.2 && git push origin v0.1.2`) or
+# run it manually from the Actions tab.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required: lets the job mint the OIDC token npm exchanges for publish rights.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs a recent npm; the version bundled with the
+      # runner's Node image can lag behind OIDC support.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Validate package
+        run: node scripts/validate.mjs
+
+      - name: Publish to npm
+        run: npm publish
