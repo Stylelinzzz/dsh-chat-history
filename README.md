@@ -29,12 +29,25 @@ After restarting `dsh web`, open any session: the header tab bar shows **Chat / 
 - **No restart needed after editing `lib/client.js`**: the profile's built-in `client-hmr` stat-polls bundles every 500ms and hot-reloads on change (roughly 1s).
 - A restart **is** required when: adding a new plugin package, changing the `dsh.client` declaration in `package.json`, or toggling enable/disable in `cordis.patch.yml`.
 
+## Compatibility
+
+The plugin adapts to both DSH client data layouts and picks one at runtime:
+
+| DSH | chat node source | cross-view switch |
+|---|---|---|
+| `>= 0.1.5` | `useChat((s) => s.order)` / `useChat((s) => s.nodes)` | `openView("chat")` |
+| `<= 0.1.0-rc.x` | `useSession((s) => s.chat.order)` / `s.chat.nodes` | click the Chat tab button |
+
+The variant is selected by whether the `useChat` prop is injected (DSH 0.1.5 removed `dsh-client-runtime` and moved chat nodes out of the session snapshot into that hook). Sessions, paging state (`hasMore` / `loadingOlder`), the `data-chat-anchor-key` DOM anchors and the node `kind === "user"` shape are unchanged across both, so the directory logic itself is shared.
+
+> Requires a DSH build whose `conversation.view` slot is declared by `dsh-client-ui-conversation` (the official "Trajectory" tab is the reference implementation).
+
 ## How it works
 
-- Data source: session snapshot `s.chat.order` + `s.chat.nodes.get(key)`, filtered to `kind === "user"`.
+- Data source: the ordered chat node keys + keyed node store, filtered to `kind === "user"` (see Compatibility for which hook supplies them).
 - DOM targeting: ui-conversation already stamps every message node with `data-chat-anchor-key` — lookup by key directly.
-- Paging: `session.loadOlder()` pulls 50 messages per page, driven by `hasMore` / `loadingOlder`; stops after 3 no-progress pages to avoid looping on a stuck host.
-- Jump: since only the active view renders, first simulate a click on the Chat tab, then poll for the target DOM and `scrollIntoView` + flash.
+- Paging: `session.loadOlder()` pulls 50 messages per page, driven by `hasMore` / `loadingOlder`; a 200-page budget backstops a host that keeps advertising more history.
+- Jump: since only the active view renders, first switch back to the Chat view (official `openView` on 0.1.5+, tab click before that), then poll for the target DOM and `scrollIntoView` + flash.
 
 ## License
 

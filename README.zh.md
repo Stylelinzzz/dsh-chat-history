@@ -29,12 +29,25 @@ dsh plugin --profile web add dsh-chat-history
 - 改 `lib/client.js` 内容后**无需重启**：profile 自带的 `client-hmr` 每 500ms stat 轮询 bundle，文件变化自动热更新（约 1 秒生效）。
 - 改 `package.json` 的 `dsh.client` 声明、新增插件、改 `cordis.patch.yml` 启用状态时**需要重启** `dsh web`。
 
+## 兼容性
+
+插件同时适配两代 DSH 客户端数据布局，运行时自动选择：
+
+| DSH 版本 | chat 节点来源 | 跨视图切换 |
+|---|---|---|
+| `>= 0.1.5` | `useChat((s) => s.order)` / `useChat((s) => s.nodes)` | `openView("chat")` |
+| `<= 0.1.0-rc.x` | `useSession((s) => s.chat.order)` / `s.chat.nodes` | 模拟点击「对话」tab |
+
+判定依据是 `useChat` 这个 prop 是否被注入——DSH 0.1.5 移除了 `dsh-client-runtime`，并把 chat 节点从会话快照搬进了该 hook。会话、分页状态（`hasMore` / `loadingOlder`）、`data-chat-anchor-key` 锚点、节点 `kind === "user"` 形态在两代之间都没变，所以目录逻辑本身共用一套。
+
+> 前提：所用 DSH 构建的 `conversation.view` 槽位由 `dsh-client-ui-conversation` 声明（官方「轨迹」tab 即参考实现）。
+
 ## 机制要点
 
-- 目录数据源：会话快照 `s.chat.order` + `s.chat.nodes.get(key)`，过滤 `kind === "user"`。
+- 目录数据源：有序 chat 节点 key + 键控节点仓库，过滤 `kind === "user"`（由哪个 hook 提供见上表）。
 - DOM 定位：ui-conversation 已给每个消息节点打 `data-chat-anchor-key`，直接按 key 查询即可。
-- 分页：`session.loadOlder()` 每页 50 条，`hasMore` / `loadingOlder` 驱动自动翻页，连续 3 次无新节点即停止（防 host 异常死循环）。
-- 跳转：tab 激活时只渲染 active view，故先模拟点击「对话」tab 切回聊天，再轮询目标 DOM 出现后 `scrollIntoView` + 高亮。
+- 分页：`session.loadOlder()` 每页 50 条，`hasMore` / `loadingOlder` 驱动自动翻页，另设 200 页上限兜底，防 host 一直报"还有更多"。
+- 跳转：tab 激活时只渲染 active view，故先切回「对话」视图（0.1.5+ 用官方 `openView`，更早版本点击 tab），再轮询目标 DOM 出现后 `scrollIntoView` + 高亮。
 
 ## License
 

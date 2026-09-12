@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-19
+
+### Fixed
+
+- **DSH 0.1.5 compatibility.** Chat nodes moved out of the session snapshot into the new `useChat` standard hook (provided by `dsh-client-ui-chat` through `uiSession.provide`), so the previous `useSession((s) => s.chat.order)` source read nothing after the upgrade. The panel now reads `useChat((s) => s.order)` / `useChat((s) => s.nodes)` on 0.1.5+, and keeps the `s.chat.*` path for older profiles (the variant is chosen by whether the `useChat` prop is present, so each one calls its hooks unconditionally).
+- Cross-view switching now uses the official `openView("chat")` owner prop on 0.1.5+, falling back to clicking the Chat tab button on profiles that predate it.
+- `dsh.client.inject` no longer lists `@deepseek-ai/dsh-client-runtime` (removed in 0.1.5, which split it into `dsh-client-ui-chat` / `-session` / `-renderer`); the dependency list now mirrors the official `ui-trajectory` plugin plus `dsh-client-ui-chat`.
+
+### Changed
+
+- Auto-paging no longer infers progress from the (now relocated) chat snapshot length; it pages until `hasMore` clears, bounded by a 200-page budget.
+
 ## [0.1.1] - 2026-08-18
 
 ### Added

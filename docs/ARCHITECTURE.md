@@ -39,27 +39,40 @@ priority; a second registration at the default priority throws at startup.
 
 ## Data flow
 
+DSH 0.1.5 moved the chat nodes out of the session snapshot into a dedicated
+`useChat` standard hook (provided by `dsh-client-ui-chat` via
+`uiSession.provide({ hooks: ["chat"] })`). The panel therefore reads from one of
+two sources, chosen by whether the `useChat` prop was injected:
+
 ```
-session snapshot (useSession)
-  → s.chat.order        // ordered chat node keys
-  → s.chat.nodes.get(key) // node: { kind, id, data }
-  → filter kind === "user"
-  → messageTitle(node.data)   // text blocks → 48-char title
-  → directory list
+0.1.5+ : useChat((s) => s.order) / useChat((s) => s.nodes)
+older  : useSession((s) => s.chat.order) / useSession((s) => s.chat.nodes)
+           → nodes.get(key)  // { kind, data }
+           → filter kind === "user"
+           → messageTitle(node.data)   // text blocks → 48-char title
+           → directory list
 ```
+
+Each variant is its own component so its hooks are called unconditionally
+(rules of hooks); both render through the shared `TocBody`. Paging state
+(`hasMore`, `loadingOlder`) stays on the session snapshot in both versions.
 
 History is paged by the session (`PAGE_MESSAGES = 50`). While the tab is
 mounted, `loadOlderPage` (injected from `ctx.sessions.binding(id)?.session`)
-keeps pulling older pages until `hasMore` is false, with a 3-stall guard.
+keeps pulling older pages until `hasMore` is false, bounded by a 200-page
+budget. The budget deliberately replaces an earlier "did this page add nodes"
+probe, which read `session.getSnapshot().chat.order.length` — a field 0.1.5
+relocated, making that probe silently always-false.
 
 ## Jump-to-message
 
 `conversation.view` renders only the active view, so the Chat view is not in
 the DOM while the History tab is active. Jumping therefore:
 
-1. simulates a click on the Chat tab (`[role="tab"]` with label 对话 / Chat),
-2. polls for the target row (`[data-chat-anchor-key]` — stamped by
-   `ui-conversation` itself),
+1. switches back to the Chat view — `openView("chat")` on 0.1.5+, else a
+   synthetic click on the Chat tab (`[role="tab"]` with label 对话 / Chat),
+2. polls for the target row (`[data-chat-anchor-key]` — stamped by the chat
+   view itself),
 3. `scrollIntoView({ behavior: "smooth", block: "start" })`,
 4. flashes via a `data-history-flash` attribute removed after 1.5s.
 
